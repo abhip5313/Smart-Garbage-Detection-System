@@ -250,10 +250,5 @@ Get the URL from Terraform output or AWS Console → CloudFront → Distribution
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
 
 > ⭐ If you found this project helpful, please give it a star!
