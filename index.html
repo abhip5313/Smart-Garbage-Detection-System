@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Garbage Detection System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --bg:        #0d0f0e;
+  --surface:   #141714;
+  --card:      #1a1e1a;
+  --border:    rgba(255,255,255,0.07);
+  --green:     #4ade80;
+  --green-dim: rgba(74,222,128,0.12);
+  --amber:     #fbbf24;
+  --red:       #f87171;
+  --text:      #e8ede8;
+  --muted:     #5a6359;
+  --mono:      'IBM Plex Mono', monospace;
+  --sans:      'Syne', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 10% 0%, rgba(74,222,128,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(251,191,36,0.04) 0%, transparent 60%);
+}
+
+/* ── TABS ──────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  padding: 20px 24px 0;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.tab {
+  padding: 10px 24px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s;
+  font-family: var(--mono);
+  position: relative;
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.active {
+  color: var(--green);
+  background: var(--bg);
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 1px;
+  background: var(--bg);
+}
+
+/* ── COMPLAINT TAB ─────────────────────────────────── */
+.main-container {
+  max-width: 520px;
+  margin: 36px auto;
+  padding: 0 20px;
+}
+
+.left-panel h1 {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.left-panel h1 span { color: var(--green); }
+
+.left-panel > p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 28px;
+  font-family: var(--mono);
+}
+
+/* ── CARDS ─────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(74,222,128,0.25), transparent);
+}
+
+.card-label {
+  font-size: 0.65rem;
+  font-family: var(--mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+/* ── CAMERA SECTION ────────────────────────────────── */
+.camera-btns {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.camera-preview-area {
+  width: 100%;
+  height: 260px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed var(--border);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+}
+
+.camera-preview-area.active {
+  border-style: solid;
+  border-color: rgba(74,222,128,0.3);
+}
+
+.camera-preview-area .placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.camera-preview-area .placeholder-icon {
+  font-size: 2rem;
+  opacity: 0.4;
+}
+
+#cameraVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+
+#cameraCanvas { display: none; }
+
+#previewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+
+/* ── LOCATION ──────────────────────────────────────── */
+#locationDisplay {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 10px;
+  min-height: 18px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  word-break: break-all;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+/* ── TEXTAREA ──────────────────────────────────────── */
+textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-family: var(--sans);
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-top: 4px;
+}
+
+textarea::placeholder { color: var(--muted); }
+textarea:focus { border-color: rgba(74,222,128,0.4); }
+
+/* ── BUTTONS ───────────────────────────────────────── */
+button {
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: #0d0f0e;
+  padding: 12px 20px;
+  font-size: 0.88rem;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.btn-primary:hover {
+  background: #6aeea0;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(74,222,128,0.3);
+}
+
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  border: 1px solid var(--border);
+  flex: 1;
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.btn-icon {
+  background: rgba(74,222,128,0.1);
+  color: var(--green);
+  border: 1px solid rgba(74,222,128,0.25);
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  width: 100%;
+}
+
+.btn-icon:hover {
+  background: rgba(74,222,128,0.18);
+  box-shadow: 0 4px 16px rgba(74,222,128,0.15);
+}
+
+/* ── LOADING ───────────────────────────────────────── */
+#loading {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+
+.loader-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 40px;
+}
+
+.loader-ring {
+  width: 44px;
+  height: 44px;
+  border: 3px solid rgba(74,222,128,0.15);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#loading p {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── RESULT MODAL ──────────────────────────────────── */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 200;
+  padding: 0;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 18px 32px;
+  width: 100%;
+  max-width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideUp 0.35s ease;
+}
+
+@media (min-width: 600px) {
+  .modal {
+    align-items: center;
+    padding: 20px;
+  }
+  .modal-content {
+    border-radius: 20px;
+    padding: 28px;
+    max-width: 480px;
+    max-height: 88vh;
+  }
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(74,222,128,0.4), transparent);
+  border-radius: 20px 20px 0 0;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-content h2 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: var(--green);
+  font-family: var(--mono);
+  letter-spacing: 0.05em;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+
+.result-row:last-of-type { border-bottom: none; }
+
+.result-key {
+  font-size: 0.7rem;
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.result-val {
+  font-size: 0.88rem;
+  color: var(--text);
+  text-align: right;
+  word-break: break-word;
+}
+
+.severity-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: var(--mono);
+  letter-spacing: 0.06em;
+}
+
+.sev-high    { background: rgba(248,113,113,0.15); color: var(--red);   border: 1px solid rgba(248,113,113,0.3); }
+.sev-medium  { background: rgba(251,191,36,0.12);  color: var(--amber); border: 1px solid rgba(251,191,36,0.3); }
+.sev-low     { background: var(--green-dim); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+.sev-clean   { background: var(--green-dim); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+
+#labels {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+#labels li {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid rgba(74,222,128,0.2);
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-family: var(--mono);
+}
+
+#resultImage {
+  width: 100%;
+  border-radius: 12px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 7px 16px;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  font-family: var(--mono);
+}
+
+.back-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+/* ── IMAGE POPUP ───────────────────────────────────── */
+#imageModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+}
+
+#imageModal .close-btn {
+  position: absolute;
+  top: 20px; right: 24px;
+  font-size: 24px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-family: var(--mono);
+}
+
+#imageModal .close-btn:hover { background: rgba(255,255,255,0.15); }
+
+#modalImage {
+  max-width: 85%;
+  max-height: 85vh;
+  border-radius: 12px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8);
+}
+
+/* ── ADMIN TAB ─────────────────────────────────────── */
+.admin-container {
+  padding: 24px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.admin-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.load-btn {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid rgba(74,222,128,0.25);
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-family: var(--mono);
+  letter-spacing: 0.05em;
+}
+
+.load-btn:hover {
+  background: rgba(74,222,128,0.2);
+  box-shadow: 0 4px 16px rgba(74,222,128,0.15);
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 700px;
+}
+
+thead tr {
+  background: rgba(74,222,128,0.06);
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  padding: 12px 16px;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: #c8d4c8;
+  vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+.msg-cell {
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.address-link {
+  color: var(--green);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.address-link:hover { opacity: 0.7; }
+
+td button {
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 5px 14px;
+  font-size: 0.75rem;
+  border-radius: 7px;
+  font-family: var(--mono);
+}
+
+td button:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+</style>
+</head>
+
+<!-- OTP MODAL -->
+<div id="otpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:300;justify-content:center;align-items:center;backdrop-filter:blur(6px);">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px 28px;width:90%;max-width:380px;position:relative;animation:slideUp 0.3s ease;">
+    <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent);border-radius:20px 20px 0 0;"></div>
+
+    <!-- STEP 1: Send OTP -->
+    <div id="otpStep1">
+      <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">🔐 Admin Access</p>
+      <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:6px;">Verify Identity</h2>
+      <p style="font-size:0.82rem;color:var(--muted);font-family:var(--mono);margin-bottom:24px;">OTP will be sent to registered email.</p>
+      <button onclick="sendOtp()" id="sendOtpBtn" style="background:var(--green);color:#0d0f0e;padding:12px 20px;font-size:0.88rem;width:100%;border:none;border-radius:10px;font-weight:700;font-family:var(--sans);cursor:pointer;letter-spacing:0.04em;">Send OTP</button>
+      <p id="otpSendError" style="font-family:var(--mono);font-size:0.75rem;color:var(--red);margin-top:10px;display:none;"></p>
+    </div>
+
+    <!-- STEP 2: Enter OTP -->
+    <div id="otpStep2" style="display:none;">
+      <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">🔐 Admin Access</p>
+      <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:6px;">Enter OTP</h2>
+      <p id="otpSentMsg" style="font-size:0.82rem;color:var(--muted);font-family:var(--mono);margin-bottom:20px;"></p>
+      <input id="otpInput" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit OTP"
+        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:1.1rem;font-family:var(--mono);letter-spacing:0.2em;text-align:center;outline:none;transition:border-color 0.2s;margin-bottom:14px;">
+      <button onclick="verifyOtp()" style="background:var(--green);color:#0d0f0e;padding:12px 20px;font-size:0.88rem;width:100%;border:none;border-radius:10px;font-weight:700;font-family:var(--sans);cursor:pointer;letter-spacing:0.04em;margin-bottom:10px;">Verify &amp; Enter</button>
+      <button onclick="resetOtpModal()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px 16px;font-size:0.78rem;border-radius:8px;width:100%;font-family:var(--mono);cursor:pointer;">← Go Back</button>
+      <p id="otpError" style="font-family:var(--mono);font-size:0.75rem;color:var(--red);margin-top:10px;display:none;"></p>
+      <p id="otpTimer" style="font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-top:8px;text-align:center;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE POPUP -->
+<div id="imageModal">
+  <button class="close-btn" onclick="closeModal()">✕</button>
+  <img id="modalImage">
+</div>
+
+<body>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('complaintTab', this)">Complaint</div>
+  <div class="tab" id="adminTabBtn" onclick="handleAdminClick(this)">Admin</div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading">
+  <div class="loader-wrap">
+    <div class="loader-ring"></div>
+    <p>Analyzing Garbage...</p>
+  </div>
+</div>
+
+<!-- RESULT MODAL -->
+<div id="resultModal" class="modal">
+  <div class="modal-content">
+    <div style="width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:99px;margin:0 auto 18px;"></div>
+    <button onclick="closeResult()" class="back-btn">← Back</button>
+    <h2>// Analysis Result</h2>
+
+    <div class="result-row">
+      <span class="result-key">Image ID</span>
+      <span class="result-val" id="imageId">—</span>
+    </div>
+    <div class="result-row">
+      <span class="result-key">Severity</span>
+      <span class="result-val"><span id="severity" class="severity-badge">—</span></span>
+    </div>
+    <div class="result-row">
+      <span class="result-key">Location</span>
+      <span class="result-val" id="location">—</span>
+    </div>
+    <div class="result-row">
+      <span class="result-key">Address</span>
+      <span class="result-val" id="address">—</span>
+    </div>
+    <div class="result-row">
+      <span class="result-key">Message</span>
+      <span class="result-val" id="userMessage">—</span>
+    </div>
+    <div class="result-row">
+      <span class="result-key">Time</span>
+      <span class="result-val" id="timestamp">—</span>
+    </div>
+
+    <p style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.1em;">Detected Labels</p>
+    <ul id="labels"></ul>
+
+    <img id="resultImage" style="display:none;">
+  </div>
+</div>
+
+<!-- COMPLAINT TAB -->
+<div id="complaintTab">
+  <div class="main-container">
+    <div class="left-panel">
+      <h1>Smart<br><span>Garbage</span> Detection</h1>
+      <p>// Capture and report garbage</p>
+
+      <!-- CAMERA CARD -->
+      <div class="card">
+        <div class="card-label">📷 Capture Image</div>
+
+        <div class="camera-preview-area" id="previewArea">
+          <div class="placeholder" id="previewPlaceholder">
+            <span class="placeholder-icon">📷</span>
+            <span>Camera preview will appear here</span>
+          </div>
+          <video id="cameraVideo" autoplay playsinline></video>
+          <canvas id="cameraCanvas"></canvas>
+          <img id="previewImage" alt="Preview">
+        </div>
+
+        <div class="camera-btns" style="margin-top:12px; margin-bottom:0;">
+          <button class="btn-secondary" id="cameraButton">Open Camera</button>
+          <button class="btn-secondary" id="captureButton" style="display:none;">📸 Capture</button>
+        </div>
+      </div>
+
+      <!-- LOCATION CARD -->
+      <div class="card">
+        <div class="card-label">📍 Location</div>
+        <button class="btn-icon" id="getLocationButton">Get Location</button>
+        <div id="locationDisplay">Location: Not fetched</div>
+      </div>
+
+      <!-- MESSAGE CARD -->
+      <div class="card">
+        <div class="card-label">💬 Complaint Message</div>
+        <textarea id="message" placeholder="Describe the garbage situation..."></textarea>
+      </div>
+
+      <!-- UPLOAD -->
+      <button class="btn-primary" onclick="uploadImage()">🚀 Upload &amp; Analyze</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN TAB -->
+<div id="adminTab" style="display:none;" class="admin-container">
+  <div class="admin-header">
+    <div class="admin-title">Admin Panel</div>
+    <button class="load-btn" onclick="loadAllData()">⟳ Refresh</button>
+  </div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Image ID</th>
+          <th>Severity</th>
+          <th>Message</th>
+          <th>Location</th>
+          <th>Address</th>
+          <th>Time</th>
+          <th>Image</th>
+        </tr>
+      </thead>
+      <tbody id="adminTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API_UPLOAD = "${api_url}/upload-url";
+const API_RESULT = "${api_url}/result";
+const API_ALL    = "${api_url}/all-results";
+
+// ── CAMERA ──────────────────────────────────────────────────
+let cameraStream;
+const cameraButton  = document.getElementById("cameraButton");
+const captureButton = document.getElementById("captureButton");
+const cameraVideo   = document.getElementById("cameraVideo");
+const cameraCanvas  = document.getElementById("cameraCanvas");
+const previewImage  = document.getElementById("previewImage");
+const previewArea   = document.getElementById("previewArea");
+const placeholder   = document.getElementById("previewPlaceholder");
+
+cameraButton.addEventListener("click", async () => {
+  try {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
+    } catch {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    }
+    cameraVideo.srcObject = cameraStream;
+    cameraVideo.style.display = "block";
+    placeholder.style.display = "none";
+    previewImage.style.display = "none";
+    previewArea.classList.add("active");
+    captureButton.style.display = "inline-flex";
+    cameraButton.style.display  = "none";
+  } catch (err) {
+    console.error("Camera error:", err);
+    alert("Cannot access camera");
+  }
+});
+
+captureButton.addEventListener("click", () => {
+  cameraCanvas.width  = cameraVideo.videoWidth;
+  cameraCanvas.height = cameraVideo.videoHeight;
+  const ctx = cameraCanvas.getContext("2d");
+  ctx.drawImage(cameraVideo, 0, 0, cameraVideo.videoWidth, cameraVideo.videoHeight);
+
+  cameraCanvas.toBlob(blob => {
+    previewImage.src = URL.createObjectURL(blob);
+    previewImage.style.display = "block";
+    previewImage.fileBlob = blob;
+  }, "image/jpeg", 0.95);
+
+  cameraStream.getTracks().forEach(t => t.stop());
+  cameraVideo.style.display   = "none";
+  captureButton.style.display = "none";
+  cameraButton.style.display  = "flex";
+  cameraButton.textContent    = "Retake";
+});
+
+// ── LOCATION ─────────────────────────────────────────────────
+let currentLocation = { lat: 0, lon: 0 };
+let currentAddress  = "-";
+
+async function getLocation() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      err => reject(err),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
+document.getElementById("getLocationButton").addEventListener("click", async () => {
+  const display = document.getElementById("locationDisplay");
+  display.textContent = "⏳ Fetching location...";
+  try {
+    const pos = await getLocation();
+    currentLocation = pos;
+
+    const addrRes  = await fetch(
+      "https://nominatim.openstreetmap.org/reverse?format=json&lat=" + pos.lat + "&lon=" + pos.lon
+    );
+    const addrData = await addrRes.json();
+    currentAddress = addrData.display_name || "-";
+
+    display.textContent =
+      "✅ " + pos.lat.toFixed(6) + ", " + pos.lon.toFixed(6) +
+      "\n" + currentAddress;
+  } catch (err) {
+    display.textContent = "❌ Could not fetch location";
+    console.warn(err);
+  }
+});
+
+// ── UPLOAD ───────────────────────────────────────────────────
+async function uploadImage() {
+  const file    = previewImage.fileBlob;
+  const message = document.getElementById("message").value || "No message";
+
+  if (!file) {
+    alert("Please capture an image first");
+    return;
+  }
+
+  document.getElementById("loading").style.display    = "flex";
+  document.getElementById("resultModal").style.display = "none";
+
+  try {
+    const location = currentLocation || { lat: 0, lon: 0 };
+    const address  = currentAddress  || "-";
+
+    const url = API_UPLOAD +
+      "?lat="          + location.lat +
+      "&lon="          + location.lon +
+      "&msg="          + encodeURIComponent(message) +
+      "&content_type=" + file.type +
+      "&address="      + encodeURIComponent(address);
+
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    const uploadUrl = data.upload_url;
+    const imageName = data.image;
+
+    const uploadRes = await fetch(uploadUrl, {
+      method:  "PUT",
+      headers: { "Content-Type": "image/jpeg" },
+      body:    file
+    });
+
+    if (!uploadRes.ok) throw new Error("S3 upload failed: " + uploadRes.status);
+
+    getResult(imageName);
+
+  } catch (err) {
+    console.error(err);
+    alert("Upload failed — check console");
+    document.getElementById("loading").style.display = "none";
+  }
+}
+
+// ── GET RESULT (POLLING) ─────────────────────────────────────
+async function getResult(imageName) {
+  let attempts = 0;
+
+  const interval = setInterval(async () => {
+    attempts++;
+    try {
+      const res  = await fetch(API_RESULT + "?image=" + imageName);
+      const data = await res.json();
+      let result = data;
+      if (typeof data.body === "string") result = JSON.parse(data.body);
+
+      if (result.severity && result.severity !== "Processing") {
+        clearInterval(interval);
+
+        document.getElementById("loading").style.display    = "none";
+        document.getElementById("resultModal").style.display = "flex";
+
+        document.getElementById("imageId").innerText     = result.ImageID || "—";
+        document.getElementById("location").innerText    = result.location
+          ? result.location.lat + ", " + result.location.lon : "—";
+        document.getElementById("address").innerText     = result.address   || "—";
+        document.getElementById("userMessage").innerText = result.message   || "—";
+        document.getElementById("timestamp").innerText   = result.timestamp || "—";
+
+        // Severity badge
+        const sevEl  = document.getElementById("severity");
+        const sevTxt = (result.severity || "").toLowerCase();
+        sevEl.innerText = result.severity;
+        sevEl.className = "severity-badge " +
+          (sevTxt === "high"   ? "sev-high"   :
+           sevTxt === "medium" ? "sev-medium" :
+           sevTxt === "low"    ? "sev-low"    : "sev-clean");
+
+        // Labels
+        const list = document.getElementById("labels");
+        list.innerHTML = "";
+        (result.labels || []).forEach(l => {
+          const li = document.createElement("li");
+          li.innerText = l;
+          list.appendChild(li);
+        });
+
+        // Result image
+        if (result.imageUrl) {
+          const img = document.getElementById("resultImage");
+          img.src = result.imageUrl;
+          img.style.display = "block";
+        }
+      }
+    } catch (err) {
+      console.error("Poll error:", err);
+    }
+
+    if (attempts > 20) {
+      clearInterval(interval);
+      document.getElementById("loading").style.display = "none";
+      alert("Processing timeout — please try again");
+    }
+  }, 2000);
+}
+
+// ── ADMIN ────────────────────────────────────────────────────
+async function loadAllData() {
+  try {
+    const res  = await fetch(API_ALL);
+    const data = await res.json();
+    let items  = data;
+    if (typeof data.body === "string") items = JSON.parse(data.body);
+
+    const table = document.getElementById("adminTable");
+    table.innerHTML = "";
+
+    items.forEach(item => {
+      const row = document.createElement("tr");
+      const loc = (item.location && item.location.lat)
+        ? item.location.lat + ", " + item.location.lon : "—";
+
+      const sevTxt   = (item.severity || "").toLowerCase();
+      const sevClass = sevTxt === "high"   ? "sev-high"   :
+                       sevTxt === "medium" ? "sev-medium" :
+                       sevTxt === "low"    ? "sev-low"    : "sev-clean";
+
+      row.innerHTML =
+        "<td style='font-family:var(--mono);font-size:0.75rem;'>" + item.ImageID + "</td>" +
+        "<td><span class='severity-badge " + sevClass + "'>" + item.severity + "</span></td>" +
+        "<td class='msg-cell'>" + item.message + "</td>" +
+        "<td style='font-family:var(--mono);font-size:0.75rem;'>" + loc + "</td>" +
+        "<td><span class='address-link' onclick=\"openMap('" + item.location.lat + "','" + item.location.lon + "')\">" + item.address + "</span></td>" +
+        "<td style='font-family:var(--mono);font-size:0.75rem;'>" + item.timestamp + "</td>" +
+        "<td><button onclick=\"viewImage('" + item.imageUrl + "')\">View</button></td>";
+
+      table.appendChild(row);
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Failed to load data");
+  }
+}
+
+// ── OTP SYSTEM ───────────────────────────────────────────────
+// EmailJS config — सगळं इथेच hardcoded
+const EMAILJS_SERVICE_ID  = "service_idhtgz3";   // ← तुमचा EmailJS Service ID टाका
+const EMAILJS_TEMPLATE_ID = "template_zmt3uib"; // ← तुमचा Template ID टाका
+const EMAILJS_PUBLIC_KEY  = "1LikV9wQwx47thD5K";     // ← तुमचा Public Key टाका
+const ADMIN_EMAIL         = "pawarabhishek4591@gmail.com";
+
+let generatedOtp   = "";
+let otpExpiry      = 0;
+let adminVerified  = false;
+let timerInterval  = null;
+
+function handleAdminClick(el) {
+  if (adminVerified) {
+    showTab("adminTab", el);
+    loadAllData();
+  } else {
+    document.getElementById("otpModal").style.display = "flex";
+  }
+}
+
+async function sendOtp() {
+  const btn = document.getElementById("sendOtpBtn");
+  const err = document.getElementById("otpSendError");
+  err.style.display = "none";
+  btn.textContent = "Sending...";
+  btn.disabled = true;
+
+  // 6-digit OTP generate
+  generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpExpiry    = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: ADMIN_EMAIL,
+      otp_code: generatedOtp,
+      to_name:  "Admin"
+    }, EMAILJS_PUBLIC_KEY);
+
+    // Step 2 दाखवा
+    document.getElementById("otpStep1").style.display = "none";
+    document.getElementById("otpStep2").style.display = "block";
+    document.getElementById("otpSentMsg").textContent =
+      "OTP sent to " + ADMIN_EMAIL.replace(/(.{3}).*(@)/, "$1***$2");
+    startOtpTimer();
+
+  } catch (e) {
+    console.error("EmailJS error:", e);
+    err.textContent = "Failed to send OTP. Check EmailJS config.";
+    err.style.display = "block";
+    btn.textContent = "Send OTP";
+    btn.disabled = false;
+  }
+}
+
+function startOtpTimer() {
+  clearInterval(timerInterval);
+  const timerEl = document.getElementById("otpTimer");
+  timerInterval = setInterval(() => {
+    const remaining = Math.max(0, Math.ceil((otpExpiry - Date.now()) / 1000));
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    timerEl.textContent = "Expires in " + m + ":" + (s < 10 ? "0" : "") + s;
+    if (remaining === 0) {
+      clearInterval(timerInterval);
+      timerEl.textContent = "OTP expired. Please try again.";
+      timerEl.style.color = "var(--red)";
+    }
+  }, 1000);
+}
+
+function verifyOtp() {
+  const input = document.getElementById("otpInput").value.trim();
+  const err   = document.getElementById("otpError");
+  err.style.display = "none";
+
+  if (Date.now() > otpExpiry) {
+    err.textContent = "OTP expired. Please go back and try again.";
+    err.style.display = "block";
+    return;
+  }
+
+  if (input === generatedOtp) {
+    clearInterval(timerInterval);
+    adminVerified = true;
+    document.getElementById("otpModal").style.display = "none";
+    resetOtpState();
+    const adminBtn = document.getElementById("adminTabBtn");
+    showTab("adminTab", adminBtn);
+    loadAllData();
+  } else {
+    err.textContent = "❌ Incorrect OTP. Please try again.";
+    err.style.display = "block";
+    document.getElementById("otpInput").value = "";
+    document.getElementById("otpInput").focus();
+  }
+}
+
+function resetOtpModal() {
+  clearInterval(timerInterval);
+  resetOtpState();
+  document.getElementById("otpStep1").style.display = "block";
+  document.getElementById("otpStep2").style.display = "none";
+  const btn = document.getElementById("sendOtpBtn");
+  btn.textContent = "Send OTP";
+  btn.disabled = false;
+}
+
+function resetOtpState() {
+  document.getElementById("otpInput").value = "";
+  document.getElementById("otpError").style.display = "none";
+  document.getElementById("otpSendError").style.display = "none";
+  document.getElementById("otpTimer").textContent = "";
+  document.getElementById("otpTimer").style.color = "var(--muted)";
+}
+
+// Enter key press on OTP input
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("otpInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") verifyOtp();
+  });
+});
+
+// ── UTILS ────────────────────────────────────────────────────
+function viewImage(url) {
+  document.getElementById("modalImage").src = url;
+  document.getElementById("imageModal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("imageModal").style.display = "none";
+}
+
+function closeResult() {
+  document.getElementById("resultModal").style.display = "none";
+}
+
+function openMap(lat, lon) {
+  window.open("https://www.google.com/maps?q=" + lat + "," + lon, "_blank");
+}
+
+function showTab(tabId, el) {
+  document.getElementById("complaintTab").style.display = "none";
+  document.getElementById("adminTab").style.display     = "none";
+  document.getElementById(tabId).style.display          = "block";
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  if (el) el.classList.add("active");
+}
+
+window.addEventListener("click", e => {
+  if (e.target === document.getElementById("resultModal")) closeResult();
+  if (e.target === document.getElementById("imageModal"))  closeModal();
+});
+
+window.onload = function () {
+  showTab("complaintTab");
+};
+</script>
+
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  emailjs.init("YOUR_PUBLIC_KEY"); // ← तुमचा Public Key इथेही टाका
+</script>
+</body>
+</html>
